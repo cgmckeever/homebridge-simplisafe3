@@ -145,14 +145,26 @@ class SS3Alarm extends SimpliSafe3Accessory {
     }
 
     async setTargetState(homekitState, callback) {
-        let state = this.HOMEKIT_TARGET_TO_SS3[homekitState];
-        if (this.debug) this.log(`Setting target state to ${state}, ${homekitState}`);
-
         if (!this.service) {
             this.log.error('Alarm not linked to Homebridge service');
             callback(new Error('Alarm not linked to Homebridge service'));
             return;
         }
+
+        var currentState = this.TARGET_HOMEKIT_TO_SS3[this.service.getCharacteristic(this.Characteristic.SecuritySystemCurrentState).value];
+        var targetState = this.TARGET_HOMEKIT_TO_SS3[homekitState];
+
+        // This should be a setting variable
+        //
+        var ignoreModeRelax = true;
+
+        if (ignoreModeRelax && (targetState == 'OFF' || (currentState == 'AWAY' && targetState == 'HOME'))) {
+          if (this.debug) this.log(`Disable Alarm Mode Relax - ${homekitState}`);
+          targetState = currentState;
+        }
+
+        let state = targetState;
+        if (this.debug) this.log(`Setting target state to ${state}, ${targetState}`);
 
         try {
             let data = await this.simplisafe.setAlarmState(state);
